@@ -40,7 +40,7 @@ def check_overlap(infnd: np.ndarray, supnd: np.ndarray) -> Union[None, np.ndarra
 
     return 
 
-def sum_inf_nd_sup(infnd: np.ndarray, supnd: np.ndarray, patient:str) -> np.ndarray:
+def sum_inf_nd_sup(infnd: np.ndarray, supnd: np.ndarray, patient: str=None) -> np.ndarray:
     """
     Adds up both labels, from inf and sup mouth.
     """
@@ -48,76 +48,14 @@ def sum_inf_nd_sup(infnd: np.ndarray, supnd: np.ndarray, patient:str) -> np.ndar
     overlap = check_overlap(infnd, supnd)
 
     if overlap:
-        raise Exception(f"""Found overlap in patient {patient}, 
+        raise Exception(f"""Found overlap in patient {patient if patient else 'UNKNOWN'}, 
                         value of inf: {overlap[0]}, value of sup: {overlap[1]}""")
     
     new_lab_summed = np.zeros_like(infnd)
     new_lab_summed = infnd + supnd
 
     return new_lab_summed
-
-def process_two_mouths_sep(case_path: str, patient: str, dtype, skip: Set[int] = None,
-                           rater: str = None, return_rater: bool = False,) -> Tuple[np.ndarray, np.ndarray, str]:
-    """
-    This won't be necessary in the future. We'll be dealing with full mouths.
-    """
-    if rater is None:
-        raters_av = os.listdir(os.path.join(case_path, 'labels'))
-        rater = decide_rater(raters_av)
-
-    label_path = os.path.join(case_path, 'labels',rater)
-
-    twomouths = subfiles(folder=label_path, join=True, suffix=('inf.nii.gz', 'sup.nii.gz'))
-
-    # which mouths are there in the folder?
-    doinf = False; dosup = False; doboth = False
-    if len(twomouths) == 2: doboth = True
-    elif os.path.join(label_path, 'inf.nii.gz') in twomouths: doinf = True
-    elif os.path.join(label_path, 'sup.nii.gz') in twomouths: dosup = True
-    else: raise RuntimeError(f'No mask found in case {case_path}')
-
-    if doboth:
-        classesinf = parse_json_mappings(file=os.path.join(case_path, 'labels', rater, 'json_mappings', 'inf.json'))
-        classessup = parse_json_mappings(file=os.path.join(case_path, 'labels', rater, 'json_mappings', 'sup.json'))
-        # assert patientfromjsoninf == patient == patientfromjsoninf, f"Patients dont match." \
-        #     f"Got {patientfromjsoninf}, {patient}, {patientfromjsonsup}"
-
-        inf_mask = os.path.join(case_path, 'labels', rater, 'inf.nii.gz')
-        sup_mask = os.path.join(case_path, 'labels', rater, 'sup.nii.gz')
-
-        infnd, infaffine = load_nifti(inf_mask, True)
-        supnd, supaffine = load_nifti(sup_mask, True)
-        assert np.allclose(supaffine, infaffine, atol=1e-5), \
-            f'Affines for sup and inf mouths don\'t match in case {case_path}. {print(supaffine, infaffine)}'
-        
-        newlabinf = change_label(infnd, classesinf, skip)
-        newlabsup = change_label(supnd, classessup, skip)
-        summed = sum_inf_nd_sup(newlabinf, newlabsup, patient=patient)
-        if return_rater:
-            return summed.astype(dtype), infaffine, rater
-        return summed.astype(dtype), infaffine
-
-    elif doinf: 
-        classesinf = parse_json_mappings(file=os.path.join(case_path, 'labels', rater, 'json_mappings', 'inf.json'))
-        inf_mask = os.path.join(case_path, 'labels', rater, 'inf.nii.gz')
-        
-        infnd, affine = load_nifti(inf_mask, True)
-        newlabinf = change_label(infnd, classesinf, skip)
-        if return_rater:
-            return newlabinf.astype(dtype), affine, rater
-        return newlabinf.astype(dtype), affine
-
-    elif dosup: 
-        classessup = parse_json_mappings(file=os.path.join(case_path, 'labels', rater, 'json_mappings', 'sup.json'))
-        sup_mask = os.path.join(case_path, 'labels', rater, 'sup.nii.gz')
-        supnd, affine = load_nifti(sup_mask, affine=True)
-        newlabsup = change_label(supnd, classessup, skip)
-        if return_rater:
-            return newlabsup.astype(dtype), affine, rater
-        return newlabsup.astype(dtype), affine
-
-    else:
-        raise Exception(f"WTF! Case: {case_path}")
+    
     
 def mapteeth_to_n(oldteethnd: np.ndarray, 
                   to_change: Set[int], 
@@ -150,3 +88,80 @@ def mapteeth_to_n(oldteethnd: np.ndarray,
     mapped_nd[np.isin(oldteethnd, list(to_change))] = n
     
     return mapped_nd
+
+def process_subject(inf_seg: np.ndarray, sup_seg: np.ndarray,
+                    inf_json: Dict[str, int], sup_json: Dict[str, int],
+                    skip: Iterable[int]):
+
+    if (inf_seg is not None) and (sup_seg is not None):
+        mapped_inf = change_label(seg=inf_seg, mapping=inf_json, skip=skip)
+        mapped_sup = change_label(seg=sup_seg, mapping=sup_json, skip=skip)
+        summed = sum_inf_nd_sup(mapped_inf, mapped_sup)
+        return summed
+    elif inf_seg is not None:
+        mapped_inf = change_label(seg=inf_seg, mapping=inf_json, skip=skip)
+        return mapped_inf
+    elif sup_seg is not None:
+        mapped_sup = change_label(seg=sup_seg, mapping=sup_json, skip=skip)
+        return mapped_sup
+    else:
+        raise RuntimeError('eh?')
+
+
+def main():
+    args = parse_args()
+
+    niftis = args.niftis
+    jsons = args.jsons
+    assert len(niftis) == len(jsons), 'Different number of niftis and jsons. Please revise your arguments'
+    
+    inf_nifti = [i for i in niftis if os.path.basename(i) == 'inf.nii.gz']
+    sup_nifti = [i for i in niftis if os.path.basename(i) == 'sup.nii.gz']
+    inf_json = [i for i in jsons if os.path.basename(i) == 'inf.json']
+    sup_json = [i for i in jsons if os.path.basename(i) == 'sup.json']
+
+    if len(niftis) != 2:
+        # check 
+        assert not (len(inf_nifti) and len(sup_json)) and not (len(sup_nifti) and len(inf_json)), f'You probably gave a wrong combination of nifti/json ' \
+            f'files. Got: \n\t{inf_nifti = }, \n\t{sup_nifti = }, \n\t{inf_json = }, \n\t{sup_json = }' \
+            f'\nYou should either give a inf.nii.gz/inf.json pair, or a sup.nii.gz/sup.json pair. Don\'t mix them up!'
+
+    inf_seg, affine_inf = load_nifti(inf_nifti[0], affine=True) if len(inf_nifti) and len(inf_json) else (None, None)
+    sup_seg, affine_sup = load_nifti(sup_nifti[0], affine=True) if len(sup_nifti) and len(sup_json) else (None, None)
+    inf_json, patient_inf = parse_json_mappings(inf_json[0], True) if len(inf_json) else (None, None)
+    sup_json, patient_sup = parse_json_mappings(sup_json[0], True) if len(sup_json) else (None, None)
+
+    mapped = process_subject(inf_seg = inf_seg, 
+                             sup_seg=sup_seg,
+                             inf_json=inf_json, 
+                             sup_json=sup_json, 
+                             skip=args.skip)
+    
+    affine = affine_inf if affine_inf is not None else affine_sup
+    patient = patient_inf if patient_inf else patient_sup
+    out_path = os.path.dirname(inf_nifti[0]) if len(inf_nifti) else os.path.dirname(sup_nifti[0])
+    dtype = np.uint8
+
+    save_nifti(
+        array=mapped, 
+        affine=affine,
+        out_path=os.path.join(out_path, f'{patient}.nii.gz'),
+        dtype=dtype
+    ) 
+
+
+def parse_args():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-niftis', required=True, nargs='+', type=str,
+                        help='Nifti files to be mapped.')
+    parser.add_argument('-jsons', required=True, nargs='+', type=str,
+                        help='Json files to do the mapping. Nº niftis and nº jsons HAS to be the same')
+    parser.add_argument('-skip', required=False, default=None, nargs='+', type=int,
+                        help='add after this argument the integers to skip. E.g.: 1 2 3 4')
+    args, unrecognized_args = parser.parse_known_args()
+    
+    return args
+    
+if __name__ == "__main__":
+    main()

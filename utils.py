@@ -16,6 +16,18 @@ def load_nifti(path: str, affine: bool = False) -> Union[np.ndarray, Tuple[np.nd
     
     return array
 
+def save_nifti(array: np.ndarray, 
+               affine: np.ndarray, 
+               out_path: str, 
+               overwrite: bool = False, 
+               dtype = None):
+    if os.path.exists(out_path) and not overwrite:
+        raise FileExistsError(f'File {out_path} exists and overwrite is set to False')
+    if dtype is not None:
+        array = array.astype(dtype)
+    outnii = nib.Nifti1Image(array, affine)
+    nib.save(outnii, out_path)
+
 def parse_json_mappings(file: str, return_patient: bool = False) -> \
     Union[Dict[str, int], Tuple[Dict[str, int], str]]:
     """
