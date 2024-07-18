@@ -125,28 +125,37 @@ def main():
         assert not (len(inf_nifti) and len(sup_json)) and not (len(sup_nifti) and len(inf_json)), f'You probably gave a wrong combination of nifti/json ' \
             f'files. Got: \n\t{inf_nifti = }, \n\t{sup_nifti = }, \n\t{inf_json = }, \n\t{sup_json = }' \
             f'\nYou should either give a inf.nii.gz/inf.json pair, or a sup.nii.gz/sup.json pair. Don\'t mix them up!'
+        
+    # we parse args
+    myargs = {}
+    try:
+        inf_seg, affine = load_nifti(inf_nifti[0], affine=True)
+        myargs['inf_seg'] = inf_seg
+        inf_json, patient = parse_json_mappings(inf_json[0], True)
+        myargs['inf_json'] = inf_json
+        out_path = os.path.dirname(inf_nifti[0])
+    except IndexError:
+        myargs['inf_seg'] = None
+        myargs['inf_json'] = None
+    try:
+        sup_seg, affine = load_nifti(sup_nifti[0], affine=True)
+        myargs['sup_seg'] = sup_seg
+        sup_json, patient = parse_json_mappings(sup_json[0], True)
+        myargs['sup_json'] = sup_json
+        out_path = os.path.dirname(sup_nifti[0]) 
+    except IndexError:
+        myargs['sup_seg'] = None
+        myargs['sup_json'] = None
 
-    inf_seg, affine_inf = load_nifti(inf_nifti[0], affine=True) if len(inf_nifti) and len(inf_json) else (None, None)
-    sup_seg, affine_sup = load_nifti(sup_nifti[0], affine=True) if len(sup_nifti) and len(sup_json) else (None, None)
-    inf_json, patient_inf = parse_json_mappings(inf_json[0], True) if len(inf_json) else (None, None)
-    sup_json, patient_sup = parse_json_mappings(sup_json[0], True) if len(sup_json) else (None, None)
+    myargs['skip'] = args.skip
 
-    mapped = process_subject(inf_seg = inf_seg, 
-                             sup_seg=sup_seg,
-                             inf_json=inf_json, 
-                             sup_json=sup_json, 
-                             skip=args.skip)
+    mapped = process_subject(**myargs)
     
-    affine = affine_inf if affine_inf is not None else affine_sup
-    patient = patient_inf if patient_inf else patient_sup
-    out_path = os.path.dirname(inf_nifti[0]) if len(inf_nifti) else os.path.dirname(sup_nifti[0])
-    dtype = np.uint8
-
     save_nifti(
         array=mapped, 
         affine=affine,
         out_path=os.path.join(out_path, f'{patient}.nii.gz'),
-        dtype=dtype
+        dtype=np.uint8
     ) 
 
 
