@@ -1,0 +1,50 @@
+[project]
+name = "labels_mapper"
+version = "1.0"
+requires-python = ">=3.10"
+description = ""
+readme = ""
+authors = [
+    { name = "Vicent Caselles", email = "vcasellesb@uoc.edu"}
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Healthcare Industry",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+]
+keywords = [
+    'image segmentation',
+    'semantic segmentation',
+    'medical image analysis',
+    'medical image segmentation',
+]
+dependencies = [
+    "numpy",
+    "nibabel"
+]
+
+[project.urls]
+homepage = "https://github.com/vcasellesb/"
+repository = "https://github.com/vcasellesb/labels_mapper"
+
+[project.scripts]
+labels_mapper = "labels_mapper.labels_mapper:main"
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "ruff",
+    "pre-commit"
+]
+
+[build-system]
+requires = ["setuptools>=67.8.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.codespell]
+skip = '.git,*.pdf,*.svg'
+#
+# ignore-words-list = ''

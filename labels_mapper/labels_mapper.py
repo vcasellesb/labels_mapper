@@ -1,7 +1,7 @@
 import os
 from typing import Iterable, Dict, Union, Tuple, Set
 import numpy as np
-from utils import *
+from labels_mapper.utils import *
 
 def change_label(seg: np.ndarray, 
                  mapping: Dict[str, int], 
