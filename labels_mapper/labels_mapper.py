@@ -48,7 +48,7 @@ def sum_inf_nd_sup(infnd: np.ndarray, supnd: np.ndarray, patient: str=None) -> n
     overlap = check_overlap(infnd, supnd)
 
     if overlap:
-        raise Exception(f"""Found overlap in patient {patient if patient else 'UNKNOWN'}, 
+        raise RuntimeError(f"""Found overlap in patient {patient if patient else 'UNKNOWN'}, 
                         value of inf: {overlap[0]}, value of sup: {overlap[1]}""")
     
     new_lab_summed = np.zeros_like(infnd)
@@ -155,7 +155,8 @@ def main():
         array=mapped, 
         affine=affine,
         out_path=os.path.join(out_path, f'{patient}.nii.gz'),
-        dtype=np.uint8
+        dtype=np.uint8,
+        overwrite=True # maybe be user controlled?
     ) 
 
 
