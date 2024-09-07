@@ -105,7 +105,7 @@ def process_subject(inf_seg: np.ndarray, sup_seg: np.ndarray,
         mapped_sup = change_label(seg=sup_seg, mapping=sup_json, skip=skip)
         return mapped_sup
     else:
-        raise RuntimeError('eh?')
+        raise RuntimeError('No arguments supplied.')
 
 
 def main():
@@ -115,10 +115,10 @@ def main():
     jsons = args.jsons
     assert len(niftis) == len(jsons), 'Different number of niftis and jsons. Please revise your arguments'
     
-    inf_nifti = [i for i in niftis if os.path.basename(i) == 'inf.nii.gz']
-    sup_nifti = [i for i in niftis if os.path.basename(i) == 'sup.nii.gz']
-    inf_json = [i for i in jsons if os.path.basename(i) == 'inf.json']
-    sup_json = [i for i in jsons if os.path.basename(i) == 'sup.json']
+    inf_nifti = [i for i in niftis if os.path.basename(i).endswith('inf.nii.gz')]
+    sup_nifti = [i for i in niftis if os.path.basename(i).endswith('sup.nii.gz')]
+    inf_json = [i for i in jsons if os.path.basename(i).endswith('inf.json')]
+    sup_json = [i for i in jsons if os.path.basename(i).endswith('sup.json')]
 
     if len(niftis) != 2:
         # check 
