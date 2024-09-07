@@ -111,14 +111,14 @@ def process_subject(inf_seg: np.ndarray, sup_seg: np.ndarray,
 def main():
     args = parse_args()
 
-    niftis = args.niftis
-    jsons = args.jsons
+    niftis: list[str] = args.niftis
+    jsons: list[str] = args.jsons
     assert len(niftis) == len(jsons), 'Different number of niftis and jsons. Please revise your arguments'
     
-    inf_nifti = [i for i in niftis if os.path.basename(i).endswith('inf.nii.gz')]
-    sup_nifti = [i for i in niftis if os.path.basename(i).endswith('sup.nii.gz')]
-    inf_json = [i for i in jsons if os.path.basename(i).endswith('inf.json')]
-    sup_json = [i for i in jsons if os.path.basename(i).endswith('sup.json')]
+    inf_nifti = [i for i in niftis if i.endswith('inf.nii.gz')]
+    sup_nifti = [i for i in niftis if i.endswith('sup.nii.gz')]
+    inf_json = [i for i in jsons if i.endswith('inf.json')]
+    sup_json = [i for i in jsons if i.endswith('sup.json')]
 
     if len(niftis) != 2:
         # check 
