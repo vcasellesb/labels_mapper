@@ -133,7 +133,7 @@ def main():
         myargs['inf_seg'] = inf_seg
         inf_json, patient = parse_json_mappings(inf_json[0], True)
         myargs['inf_json'] = inf_json
-        out_path = os.path.dirname(inf_nifti[0])
+        out_path, out_file = os.path.split(inf_nifti[0])
     except IndexError:
         myargs['inf_seg'] = None
         myargs['inf_json'] = None
@@ -142,7 +142,7 @@ def main():
         myargs['sup_seg'] = sup_seg
         sup_json, patient = parse_json_mappings(sup_json[0], True)
         myargs['sup_json'] = sup_json
-        out_path = os.path.dirname(sup_nifti[0]) 
+        out_path, out_file = os.path.split(sup_nifti[0])
     except IndexError:
         myargs['sup_seg'] = None
         myargs['sup_json'] = None
@@ -150,11 +150,14 @@ def main():
     myargs['skip'] = args.skip
 
     mapped = process_subject(**myargs)
+
+    out_file = out_file.split('_')[:-1]
+    out_file = "_".join(out_file)
     
     save_nifti(
         array=mapped, 
         affine=affine,
-        out_path=os.path.join(out_path, f'{patient}.nii.gz'),
+        out_path=os.path.join(out_path, out_file + '.nii.gz'),
         dtype=np.uint8,
         overwrite=True # maybe be user controlled?
     ) 
