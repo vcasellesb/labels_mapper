@@ -15,6 +15,7 @@ def change_label(seg: np.ndarray,
 
     out = np.zeros_like(seg)
     for k, v in mapping.items():
+        assert np.any(seg == int(k)), f'Label {k} present in json, but not in segmentation. Please revise. Corresponds to value {v}.'
         out[seg==int(k)] = int(v)
     
     if skip is not None:
