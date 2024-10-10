@@ -116,6 +116,8 @@ def main():
     jsons: list[str] = args.jsons
     assert len(niftis) == len(jsons), 'Different number of niftis and jsons. Please revise your arguments'
     
+    out_file = args.out_file
+
     inf_nifti = [i for i in niftis if i.endswith('inf.nii.gz')]
     sup_nifti = [i for i in niftis if i.endswith('sup.nii.gz')]
     inf_json = [i for i in jsons if i.endswith('inf.json')]
@@ -134,7 +136,7 @@ def main():
         myargs['inf_seg'] = inf_seg
         inf_json, patient = parse_json_mappings(inf_json[0], True)
         myargs['inf_json'] = inf_json
-        out_path, out_file = os.path.split(inf_nifti[0])
+        out_path = os.path.dirname(inf_nifti[0])
     except IndexError:
         myargs['inf_seg'] = None
         myargs['inf_json'] = None
@@ -143,7 +145,7 @@ def main():
         myargs['sup_seg'] = sup_seg
         sup_json, patient = parse_json_mappings(sup_json[0], True)
         myargs['sup_json'] = sup_json
-        out_path, out_file = os.path.split(sup_nifti[0])
+        out_path = os.path.dirname(sup_nifti[0])
     except IndexError:
         myargs['sup_seg'] = None
         myargs['sup_json'] = None
@@ -152,13 +154,14 @@ def main():
 
     mapped = process_subject(**myargs)
 
-    out_file = out_file.split('_')[:-1]
-    out_file = "_".join(out_file)
+    if out_file is None:
+        out_file = f'labels_mapped.nii.gz'
+        out_file = os.path.join(out_path, out_file)
     
     save_nifti(
         array=mapped, 
         affine=affine,
-        out_path=os.path.join(out_path, out_file + '.nii.gz'),
+        out_path=out_file,
         dtype=np.uint8,
         overwrite=True # maybe be user controlled?
     ) 
@@ -173,6 +176,8 @@ def parse_args():
                         help='Json files to do the mapping. Nº niftis and nº jsons HAS to be the same')
     parser.add_argument('-skip', required=False, default=None, nargs='+', type=int,
                         help='add after this argument the integers to skip. E.g.: 1 2 3 4')
+    parser.add_argument('-out_file', required=False, default=None, type=str,
+                        help='Output file path.')
     args, unrecognized_args = parser.parse_known_args()
     
     return args
