@@ -26,36 +26,36 @@ def change_label(seg: np.ndarray,
 
 def check_overlap(infnd: np.ndarray, supnd: np.ndarray) -> Union[None, np.ndarray]:
     """Bins two labels and checks if there is any overlap"""
-    binned_inf = np.zeros_like(infnd)
-    binned_inf[infnd!=0] = 1
-    binned_sup = np.zeros_like(supnd)
-    binned_sup[supnd!=0] = 1
 
-    sum = binned_inf + binned_sup
+    overlap = np.logical_and(infnd > 0, supnd > 0)
 
-    overlap = np.any(sum>1)
-
-    if overlap:
-        where = np.where(sum > 1)
-        return infnd[where], supnd[where]
+    if overlap.any():
+        where = np.where(overlap, 1, 0)
+        return where
 
     return 
 
-def sum_inf_nd_sup(infnd: np.ndarray, supnd: np.ndarray, patient: str=None) -> np.ndarray:
+def sum_inf_nd_sup(infnd: np.ndarray, supnd: np.ndarray, 
+                   affine: np.ndarray, patient: str=None) -> np.ndarray:
     """
     Adds up both labels, from inf and sup mouth.
     """
     
     overlap = check_overlap(infnd, supnd)
 
-    if overlap:
-        raise RuntimeError(f"""Found overlap in patient {patient if patient else 'UNKNOWN'}, 
-                        value of inf: {overlap[0]}, value of sup: {overlap[1]}""")
+    if overlap is not None:
+        debugging_path = os.path.abspath('overlap_for_debugging.nii.gz')
+        save_nifti(
+            overlap,
+            affine=affine,
+            out_path=debugging_path,
+            overwrite=True,
+            dtype=np.uint8
+        )
+        raise RuntimeError(f'Found overlap when processing patient {patient if patient else 'UNKNOWN'}, '
+                           f'saved overlap array at {debugging_path} for debugging purposes.')
     
-    new_lab_summed = np.zeros_like(infnd)
-    new_lab_summed = infnd + supnd
-
-    return new_lab_summed
+    return infnd + supnd
     
     
 def mapteeth_to_n(oldteethnd: np.ndarray, 
@@ -90,14 +90,17 @@ def mapteeth_to_n(oldteethnd: np.ndarray,
     
     return mapped_nd
 
-def process_subject(inf_seg: np.ndarray, sup_seg: np.ndarray,
-                    inf_json: Dict[str, int], sup_json: Dict[str, int],
-                    skip: Iterable[int]):
+def process_subject(inf_seg: np.ndarray, 
+                    sup_seg: np.ndarray,
+                    inf_json: Dict[str, int], 
+                    sup_json: Dict[str, int], 
+                    skip: Iterable[int],
+                    affine: np.ndarray):
 
     if (inf_seg is not None) and (sup_seg is not None):
         mapped_inf = change_label(seg=inf_seg, mapping=inf_json, skip=skip)
         mapped_sup = change_label(seg=sup_seg, mapping=sup_json, skip=skip)
-        summed = sum_inf_nd_sup(mapped_inf, mapped_sup)
+        summed = sum_inf_nd_sup(mapped_inf, mapped_sup, affine)
         return summed
     elif inf_seg is not None:
         mapped_inf = change_label(seg=inf_seg, mapping=inf_json, skip=skip)
@@ -137,6 +140,7 @@ def main():
         inf_json, patient = parse_json_mappings(inf_json[0], True)
         myargs['inf_json'] = inf_json
         out_path = os.path.dirname(inf_nifti[0])
+        myargs['affine'] = affine
     except IndexError:
         myargs['inf_seg'] = None
         myargs['inf_json'] = None
@@ -146,6 +150,7 @@ def main():
         sup_json, patient = parse_json_mappings(sup_json[0], True)
         myargs['sup_json'] = sup_json
         out_path = os.path.dirname(sup_nifti[0])
+        myargs['affine'] = affine
     except IndexError:
         myargs['sup_seg'] = None
         myargs['sup_json'] = None
