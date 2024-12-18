@@ -121,10 +121,10 @@ def main():
     
     out_file = args.out_file
 
-    inf_nifti = [i for i in niftis if i.endswith('inf.nii.gz')]
-    sup_nifti = [i for i in niftis if i.endswith('sup.nii.gz')]
-    inf_json = [i for i in jsons if i.endswith('inf.json')]
-    sup_json = [i for i in jsons if i.endswith('sup.json')]
+    inf_nifti = [i for i in niftis if 'inf' in os.path.basename(i) and i.endswith('.nii.gz')]
+    sup_nifti = [i for i in niftis if 'sup' in os.path.basename(i) and i.endswith('.nii.gz')]
+    inf_json = [i for i in jsons if 'inf' in os.path.basename(i) and i.endswith('.json')]
+    sup_json = [i for i in jsons if 'sup' in os.path.basename(i) and i.endswith('.json')]
 
     if len(niftis) != 2:
         # check 
