@@ -9,8 +9,7 @@ def change_label(seg: np.ndarray,
     """
     Gets a 3d array with label values. Changes them according to mapping.
     ---
-    param: 
-        skip: Iterable with ints corresponding to classes that will be removed from seg
+    param: skip: Iterable with ints corresponding to classes that will be removed from seg
     """
 
     out = np.zeros_like(seg)
@@ -44,7 +43,7 @@ def sum_inf_nd_sup(infnd: np.ndarray, supnd: np.ndarray,
     overlap = check_overlap(infnd, supnd)
 
     if overlap is not None:
-        debugging_path = os.path.abspath('overlap_for_debugging.nii.gz')
+        debugging_path = os.path.abspath(os.getcwd() + '/overlap_for_debugging.nii.gz')
         save_nifti(
             overlap,
             affine=affine,
@@ -56,7 +55,6 @@ def sum_inf_nd_sup(infnd: np.ndarray, supnd: np.ndarray,
                            f'saved overlap array at {debugging_path} for debugging purposes.')
     
     return infnd + supnd
-    
     
 def mapteeth_to_n(oldteethnd: np.ndarray, 
                   to_change: Set[int], 
@@ -110,7 +108,6 @@ def process_subject(inf_seg: np.ndarray,
         return mapped_sup
     else:
         raise RuntimeError('No arguments supplied.')
-
 
 def main():
     args = parse_args()
