@@ -65,7 +65,7 @@ def mapteeth_to_n(oldteethnd: np.ndarray,
                   n: Union[int, Set[int]],
                   copy: bool=True) -> np.ndarray:
     """
-    Converts label values that are in a set of values (in my case the set represents teeth) 
+    Converts label values that are in a set of values (in my case the set represents teeth)
     to a new id (label value).
 
     Parameters
