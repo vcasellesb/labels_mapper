@@ -116,8 +116,8 @@ def process_subject(inf_seg: np.ndarray,
 def main():
     args = parse_args()
 
-    niftis: list[str] = args.niftis
-    jsons: list[str] = args.jsons
+    niftis: List[str] = args.niftis
+    jsons: List[str] = args.jsons
     assert len(niftis) == len(jsons), 'Different number of niftis and jsons. Please revise your arguments'
     
     out_file = args.out_file
