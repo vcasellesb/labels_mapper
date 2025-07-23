@@ -3,6 +3,10 @@ from typing import Iterable, Dict, Union, Tuple, Set
 import numpy as np
 from labels_mapper.utils import *
 
+
+_JSON_FILE_ENDING = ('.json', )
+_NIFTI_FILE_ENDING = ('.nii', '.nii.gz')
+
 def change_label(seg: np.ndarray, 
                  mapping: Dict[str, int], 
                  skip: Iterable[int] = None) -> np.ndarray:
@@ -118,10 +122,10 @@ def main():
     
     out_file = args.out_file
 
-    inf_nifti = [i for i in niftis if 'inf' in os.path.basename(i) and i.endswith('.nii.gz')]
-    sup_nifti = [i for i in niftis if 'sup' in os.path.basename(i) and i.endswith('.nii.gz')]
-    inf_json = [i for i in jsons if 'inf' in os.path.basename(i) and i.endswith('.json')]
-    sup_json = [i for i in jsons if 'sup' in os.path.basename(i) and i.endswith('.json')]
+    inf_nifti = [i for i in niftis if 'inf' in os.path.basename(i) and i.endswith(_NIFTI_FILE_ENDING)]
+    sup_nifti = [i for i in niftis if 'sup' in os.path.basename(i) and i.endswith(_NIFTI_FILE_ENDING)]
+    inf_json = [i for i in jsons if 'inf' in os.path.basename(i) and i.endswith(_JSON_FILE_ENDING)]
+    sup_json = [i for i in jsons if 'sup' in os.path.basename(i) and i.endswith(_JSON_FILE_ENDING)]
 
     if len(niftis) != 2:
         # check 
