@@ -52,6 +52,14 @@ def load_json(file: str):
         a = json.load(f)
     return a
 
+def determine_maxval(*dicts_with_labels: Dict[str, int] | None) -> int | None:
+    maxval = None
+    for d in dicts_with_labels:
+        if d is not None:
+            maxval = max(d.values())
+    
+    return maxval
+
 def subfiles(folder: str, join: bool = True, 
              prefix: str = None, suffix: str = None, 
              sort: bool = True, exclude: Union[str, Iterable] = None) -> List[str]:
@@ -78,3 +86,11 @@ def subfiles(folder: str, join: bool = True,
     if sort:
         res.sort()
     return res
+
+if __name__ == "__main__":
+
+    maxval = determine_maxval({'1': 24, '2': 38, "4": 1})
+    assert maxval == 38
+
+    maxval = determine_maxval({'1': 24, '2': 38, "4": 1}, {'5': 84, '3': 2})
+    assert maxval == 84

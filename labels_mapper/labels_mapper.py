@@ -1,5 +1,5 @@
 import os
-from typing import Iterable, Dict, Union, Tuple, Set
+from typing import Iterable, Dict, Union, Set
 import numpy as np
 from labels_mapper.utils import *
 
@@ -7,8 +7,8 @@ from labels_mapper.utils import *
 _JSON_FILE_ENDING = ('.json', )
 _NIFTI_FILE_ENDING = ('.nii', '.nii.gz')
 
-def change_label(seg: np.ndarray, 
-                 mapping: Dict[str, int], 
+def change_label(seg: np.ndarray,
+                 mapping: Dict[str, int],
                  skip: Iterable[int] = None) -> np.ndarray:
     """
     Gets a 3d array with label values. Changes them according to mapping.
@@ -36,10 +36,10 @@ def check_overlap(infnd: np.ndarray, supnd: np.ndarray) -> Union[None, np.ndarra
         where = np.where(overlap, 1, 0)
         return where
 
-    return 
-
-def sum_inf_nd_sup(infnd: np.ndarray, supnd: np.ndarray, 
-                   affine: np.ndarray, patient: str=None) -> np.ndarray:
+def sum_inf_nd_sup(infnd: np.ndarray,
+                   supnd: np.ndarray,
+                   affine: np.ndarray,
+                   patient: str = None) -> np.ndarray:
     """
     Adds up both labels, from inf and sup mouth.
     """
@@ -87,15 +87,15 @@ def mapteeth_to_n(oldteethnd: np.ndarray,
         n = list(n)[0]
         
     # we copy the array not to fuck up the original one
-    mapped_nd = oldteethnd.copy() if copy else oldteethnd    
+    mapped_nd = oldteethnd.copy() if copy else oldteethnd
     mapped_nd[np.isin(oldteethnd, list(to_change))] = n
     
     return mapped_nd
 
-def process_subject(inf_seg: np.ndarray, 
+def process_subject(inf_seg: np.ndarray,
                     sup_seg: np.ndarray,
-                    inf_json: Dict[str, int], 
-                    sup_json: Dict[str, int], 
+                    inf_json: Dict[str, int],
+                    sup_json: Dict[str, int],
                     skip: Iterable[int],
                     affine: np.ndarray):
 
@@ -143,8 +143,7 @@ def main():
         out_path = os.path.dirname(inf_nifti[0])
         myargs['affine'] = affine
     except IndexError:
-        myargs['inf_seg'] = None
-        myargs['inf_json'] = None
+        myargs['inf_seg'] = myargs['inf_json'] = None
     try:
         sup_seg, affine = load_nifti(sup_nifti[0], affine=True)
         myargs['sup_seg'] = sup_seg
@@ -153,8 +152,7 @@ def main():
         out_path = os.path.dirname(sup_nifti[0])
         myargs['affine'] = affine
     except IndexError:
-        myargs['sup_seg'] = None
-        myargs['sup_json'] = None
+        myargs['sup_seg'] = myargs['sup_json'] = None
 
     myargs['skip'] = args.skip
 
@@ -163,14 +161,17 @@ def main():
     if out_file is None:
         out_file = f'labels_mapped.nii.gz'
         out_file = os.path.join(out_path, out_file)
+
+    maxval = determine_maxval(myargs['inf_json'], myargs['sup_json'])
+    outdtype = np.uint16 if maxval > 255 else np.uint8
     
     save_nifti(
-        array=mapped, 
+        array=mapped,
         affine=affine,
         out_path=out_file,
-        dtype=np.uint8,
+        dtype=outdtype,
         overwrite=True # maybe be user controlled?
-    ) 
+    )
 
 
 def parse_args():
