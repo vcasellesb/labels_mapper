@@ -60,9 +60,9 @@ def sum_inf_nd_sup(infnd: np.ndarray,
     
     return infnd + supnd
     
-def mapteeth_to_n(oldteethnd: np.ndarray, 
-                  to_change: Set[int], 
-                  n: Union[int, Set[int]], 
+def mapteeth_to_n(oldteethnd: np.ndarray,
+                  to_change: Set[int],
+                  n: Union[int, Set[int]],
                   copy: bool=True) -> np.ndarray:
     """
     Converts label values that are in a set of values (in my case the set represents teeth) 
