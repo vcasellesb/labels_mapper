@@ -136,7 +136,7 @@ def main():
     # we parse args
     myargs = {}
     try:
-        inf_seg, affine = load_nifti(inf_nifti[0], affine=True)
+        inf_seg, affine, header = load_nifti(inf_nifti[0])
         myargs['inf_seg'] = inf_seg
         inf_json, patient = parse_json_mappings(inf_json[0], True)
         myargs['inf_json'] = inf_json
@@ -145,7 +145,7 @@ def main():
     except IndexError:
         myargs['inf_seg'] = myargs['inf_json'] = None
     try:
-        sup_seg, affine = load_nifti(sup_nifti[0], affine=True)
+        sup_seg, affine, header = load_nifti(sup_nifti[0])
         myargs['sup_seg'] = sup_seg
         sup_json, patient = parse_json_mappings(sup_json[0], True)
         myargs['sup_json'] = sup_json
@@ -169,6 +169,7 @@ def main():
         array=mapped,
         affine=affine,
         out_path=out_file,
+        header=header,
         dtype=outdtype,
         overwrite=True # maybe be user controlled?
     )

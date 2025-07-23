@@ -3,29 +3,27 @@ from typing import Union, Dict, Tuple, Iterable, List
 import numpy as np
 import nibabel as nib
 
-def load_nifti(path: str, affine: bool = False) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
+
+def load_nifti(path: str) -> Tuple[np.ndarray, ...]:
     """
     Helper to easily load nifti files.
     """
     nifti: nib.Nifti1Image = nib.load(path)
-    array = nifti.get_fdata()
-
-    if affine:
-        affine = nifti.affine
-        return array, affine
+    array = np.asanyarray(nifti.dataobj)
     
-    return array
+    return array, nifti.affine, nifti.header
 
-def save_nifti(array: np.ndarray, 
-               affine: np.ndarray, 
-               out_path: str, 
-               overwrite: bool = False, 
+def save_nifti(array: np.ndarray,
+               affine: np.ndarray,
+               out_path: str,
+               header = None,
+               overwrite: bool = False,
                dtype = None):
     if os.path.exists(out_path) and not overwrite:
         raise FileExistsError(f'File {out_path} exists and overwrite is set to False')
+    outnii = nib.Nifti1Image(array, affine, header)
     if dtype is not None:
-        array = array.astype(dtype)
-    outnii = nib.Nifti1Image(array, affine)
+        outnii.set_data_dtype(dtype)
     nib.save(outnii, out_path)
 
 def parse_json_mappings(file: str, return_patient: bool = False) -> \
@@ -38,7 +36,7 @@ def parse_json_mappings(file: str, return_patient: bool = False) -> \
     dict_raw = load_json(file)
     labels: dict = dict_raw["labels_mapping"]
     if not return_patient:
-        return labels   
+        return labels
     
     ## I'm dumb
     try:
@@ -60,8 +58,8 @@ def determine_maxval(*dicts_with_labels: Dict[str, int] | None) -> int | None:
     
     return maxval
 
-def subfiles(folder: str, join: bool = True, 
-             prefix: str = None, suffix: str = None, 
+def subfiles(folder: str, join: bool = True,
+             prefix: str = None, suffix: str = None,
              sort: bool = True, exclude: Union[str, Iterable] = None) -> List[str]:
     
     if join:
@@ -70,7 +68,7 @@ def subfiles(folder: str, join: bool = True,
         l = lambda x, y: y
     
     if exclude:
-        # since os.listdir only returns basename, in order to be able to compare 
+        # since os.listdir only returns basename, in order to be able to compare
         # strings consistently we have to convert all exclude args to basename
         if isinstance(exclude, str):
             exclude = [os.path.basename(exclude)]
