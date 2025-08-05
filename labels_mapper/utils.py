@@ -10,7 +10,7 @@ def load_nifti(path: str) -> Tuple[np.ndarray, ...]:
     """
     nifti: nib.Nifti1Image = nib.load(path)
     array = np.asanyarray(nifti.dataobj)
-    
+
     return array, nifti.affine, nifti.header
 
 def save_nifti(array: np.ndarray,
@@ -32,12 +32,12 @@ def parse_json_mappings(file: str, return_patient: bool = False) -> \
     Gets a json file path and returns the dictionary with labels
     This dictionary has the array values as keys and the actual teeth label as values.
     """
-    
+
     dict_raw = load_json(file)
     labels: dict = dict_raw["labels_mapping"]
     if not return_patient:
         return labels
-    
+
     ## I'm dumb
     try:
         patient: str = dict_raw['patient_name']
@@ -55,18 +55,18 @@ def determine_maxval(*dicts_with_labels: Dict[str, int] | None) -> int | None:
     for d in dicts_with_labels:
         if d is not None:
             maxval = max(d.values())
-    
+
     return maxval
 
 def subfiles(folder: str, join: bool = True,
              prefix: str = None, suffix: str = None,
              sort: bool = True, exclude: Union[str, Iterable] = None) -> List[str]:
-    
+
     if join:
         l = os.path.join
     else:
         l = lambda x, y: y
-    
+
     if exclude:
         # since os.listdir only returns basename, in order to be able to compare
         # strings consistently we have to convert all exclude args to basename
