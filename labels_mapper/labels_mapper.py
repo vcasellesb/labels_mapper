@@ -49,38 +49,6 @@ def sum_inf_nd_sup(infnd: np.ndarray,
 
     return infnd + supnd
 
-def mapteeth_to_n(oldteethnd: np.ndarray,
-                  to_change: Set[int],
-                  n: Union[int, Set[int]],
-                  copy: bool = True) -> np.ndarray:
-    """
-    Converts label values that are in a set of values (in my case the set represents teeth)
-    to a new id (label value).
-
-    Parameters
-    ------------
-    oldteethnd: np.ndarray
-        Input array that we have to change its values
-    to_change: set
-        set containing the values that will be mapped to n
-    n: int
-
-    Returns
-    ------------
-    New array with mapping done (np.ndarray)
-    """
-
-    # I hate myself
-    if isinstance(n, set):
-        assert len(n) == 1, f"WTF?? {n = }"
-        n = list(n)[0]
-
-    # we copy the array not to fuck up the original one
-    mapped_nd = oldteethnd.copy() if copy else oldteethnd
-    mapped_nd[np.isin(oldteethnd, list(to_change))] = n
-
-    return mapped_nd
-
 def process_subject(inf_seg: np.ndarray,
                     sup_seg: np.ndarray,
                     inf_json: Dict[str, int],
