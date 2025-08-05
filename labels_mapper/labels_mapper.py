@@ -27,15 +27,6 @@ def change_label(seg: np.ndarray,
 
     return out
 
-def check_overlap(infnd: np.ndarray, supnd: np.ndarray) -> Union[None, np.ndarray]:
-    """Bins two labels and checks if there is any overlap"""
-
-    overlap = np.logical_and(infnd > 0, supnd > 0)
-
-    if overlap.any():
-        where = np.where(overlap, 1, 0)
-        return where
-
 def sum_inf_nd_sup(infnd: np.ndarray,
                    supnd: np.ndarray,
                    affine: np.ndarray,
@@ -43,10 +34,8 @@ def sum_inf_nd_sup(infnd: np.ndarray,
     """
     Adds up both labels, from inf and sup mouth.
     """
-    
-    overlap = check_overlap(infnd, supnd)
-
-    if overlap is not None:
+    overlap = np.logical_and(infnd, supnd)
+    if overlap.any():
         debugging_path = os.path.abspath(os.getcwd() + '/overlap_for_debugging.nii.gz')
         save_nifti(
             overlap,
@@ -57,13 +46,13 @@ def sum_inf_nd_sup(infnd: np.ndarray,
         )
         raise RuntimeError(f'Found overlap when processing patient {patient if patient else 'UNKNOWN'}, '
                            f'saved overlap array at {debugging_path} for debugging purposes.')
-    
+
     return infnd + supnd
-    
+
 def mapteeth_to_n(oldteethnd: np.ndarray,
                   to_change: Set[int],
                   n: Union[int, Set[int]],
-                  copy: bool=True) -> np.ndarray:
+                  copy: bool = True) -> np.ndarray:
     """
     Converts label values that are in a set of values (in my case the set represents teeth)
     to a new id (label value).
@@ -85,11 +74,11 @@ def mapteeth_to_n(oldteethnd: np.ndarray,
     if isinstance(n, set):
         assert len(n) == 1, f"WTF?? {n = }"
         n = list(n)[0]
-        
+
     # we copy the array not to fuck up the original one
     mapped_nd = oldteethnd.copy() if copy else oldteethnd
     mapped_nd[np.isin(oldteethnd, list(to_change))] = n
-    
+
     return mapped_nd
 
 def process_subject(inf_seg: np.ndarray,
@@ -119,7 +108,7 @@ def main():
     niftis: List[str] = args.niftis
     jsons: List[str] = args.jsons
     assert len(niftis) == len(jsons), 'Different number of niftis and jsons. Please revise your arguments'
-    
+
     out_file = args.out_file
 
     inf_nifti = [i for i in niftis if 'inf' in os.path.basename(i) and i.endswith(_NIFTI_FILE_ENDING)]
@@ -128,11 +117,11 @@ def main():
     sup_json = [i for i in jsons if 'sup' in os.path.basename(i) and i.endswith(_JSON_FILE_ENDING)]
 
     if len(niftis) != 2:
-        # check 
+        # check
         assert not (len(inf_nifti) and len(sup_json)) and not (len(sup_nifti) and len(inf_json)), f'You probably gave a wrong combination of nifti/json ' \
             f'files. Got: \n\t{inf_nifti = }, \n\t{sup_nifti = }, \n\t{inf_json = }, \n\t{sup_json = }' \
             f'\nYou should either give a inf.nii.gz/inf.json pair, or a sup.nii.gz/sup.json pair. Don\'t mix them up!'
-        
+
     # we parse args
     myargs = {}
     try:
@@ -164,7 +153,7 @@ def main():
 
     maxval = determine_maxval(myargs['inf_json'], myargs['sup_json'])
     outdtype = np.uint16 if maxval > 255 else np.uint8
-    
+
     save_nifti(
         array=mapped,
         affine=affine,
@@ -187,8 +176,8 @@ def parse_args():
     parser.add_argument('-out_file', required=False, default=None, type=str,
                         help='Output file path.')
     args, unrecognized_args = parser.parse_known_args()
-    
+
     return args
-    
+
 if __name__ == "__main__":
     main()
