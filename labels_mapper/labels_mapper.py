@@ -1,11 +1,9 @@
 import os
-from typing import Iterable, Dict, Union, Set
+import re
+from typing import Iterable, Dict, Union, Set, Optional
 import numpy as np
 from labels_mapper.utils import *
-
-
-_JSON_FILE_ENDING = ('.json', )
-_NIFTI_FILE_ENDING = ('.nii', '.nii.gz')
+from .folder_stuff import get_args
 
 def change_label(seg: np.ndarray,
                  mapping: Dict[str, int],
@@ -20,7 +18,7 @@ def change_label(seg: np.ndarray,
     for k, v in mapping.items():
         assert np.any(seg == int(k)), f'Label {k} present in json, but not in segmentation. Please revise. Corresponds to value {v}.'
         out[seg==int(k)] = int(v)
-    
+
     if skip is not None:
         skip = list(set(skip))
         out[np.isin(out, skip)] = 0
@@ -49,85 +47,46 @@ def sum_inf_nd_sup(infnd: np.ndarray,
 
     return infnd + supnd
 
-def process_subject(inf_seg: np.ndarray,
-                    sup_seg: np.ndarray,
-                    inf_json: Dict[str, int],
-                    sup_json: Dict[str, int],
-                    skip: Iterable[int],
-                    affine: np.ndarray):
+def process_subject(*tuples: tuple[str, str],
+                    skip: Optional[Iterable[int]]) -> np.ndarray:
+    """
+    :param tuples: should be a tuple where the first item is a nifti, the second one a json
+    """
+    (seg_file, json_file), *tuples = tuples
 
-    if (inf_seg is not None) and (sup_seg is not None):
-        mapped_inf = change_label(seg=inf_seg, mapping=inf_json, skip=skip)
-        mapped_sup = change_label(seg=sup_seg, mapping=sup_json, skip=skip)
-        summed = sum_inf_nd_sup(mapped_inf, mapped_sup, affine)
-        return summed
-    elif inf_seg is not None:
-        mapped_inf = change_label(seg=inf_seg, mapping=inf_json, skip=skip)
-        return mapped_inf
-    elif sup_seg is not None:
-        mapped_sup = change_label(seg=sup_seg, mapping=sup_json, skip=skip)
-        return mapped_sup
-    else:
-        raise RuntimeError('No arguments supplied.')
+    seg, affine, header = load_nifti(seg_file)
+
+    mapping = parse_json_mappings(json_file) 
+    ret = change_label(seg, mapping, skip)
+    
+    for seg_file, json_file in tuples:
+        seg, _affine, _ = load_nifti(seg_file)
+        mapping = parse_json_mappings(json_file)
+        assert np.allclose(affine, _affine)
+        mapped_seg = change_label(seg, mapping, skip)
+        ret += mapped_seg
+
+    return ret, affine, header
 
 def main():
     args = parse_args()
 
-    niftis: List[str] = args.niftis
-    jsons: List[str] = args.jsons
-    assert len(niftis) == len(jsons), 'Different number of niftis and jsons. Please revise your arguments'
+    folder = args.folder
+    myargs = get_args(folder)
 
+    mapped, affine, header = process_subject(*myargs, skip=args.skip)
     out_file = args.out_file
-
-    inf_nifti = [i for i in niftis if 'inf' in os.path.basename(i) and i.endswith(_NIFTI_FILE_ENDING)]
-    sup_nifti = [i for i in niftis if 'sup' in os.path.basename(i) and i.endswith(_NIFTI_FILE_ENDING)]
-    inf_json = [i for i in jsons if 'inf' in os.path.basename(i) and i.endswith(_JSON_FILE_ENDING)]
-    sup_json = [i for i in jsons if 'sup' in os.path.basename(i) and i.endswith(_JSON_FILE_ENDING)]
-
-    if len(niftis) != 2:
-        # check
-        assert not (len(inf_nifti) and len(sup_json)) and not (len(sup_nifti) and len(inf_json)), f'You probably gave a wrong combination of nifti/json ' \
-            f'files. Got: \n\t{inf_nifti = }, \n\t{sup_nifti = }, \n\t{inf_json = }, \n\t{sup_json = }' \
-            f'\nYou should either give a inf.nii.gz/inf.json pair, or a sup.nii.gz/sup.json pair. Don\'t mix them up!'
-
-    # we parse args
-    myargs = {}
-    try:
-        inf_seg, affine, header = load_nifti(inf_nifti[0])
-        myargs['inf_seg'] = inf_seg
-        inf_json, patient = parse_json_mappings(inf_json[0], True)
-        myargs['inf_json'] = inf_json
-        out_path = os.path.dirname(inf_nifti[0])
-        myargs['affine'] = affine
-    except IndexError:
-        myargs['inf_seg'] = myargs['inf_json'] = None
-    try:
-        sup_seg, affine, header = load_nifti(sup_nifti[0])
-        myargs['sup_seg'] = sup_seg
-        sup_json, patient = parse_json_mappings(sup_json[0], True)
-        myargs['sup_json'] = sup_json
-        out_path = os.path.dirname(sup_nifti[0])
-        myargs['affine'] = affine
-    except IndexError:
-        myargs['sup_seg'] = myargs['sup_json'] = None
-
-    myargs['skip'] = args.skip
-
-    mapped = process_subject(**myargs)
-
     if out_file is None:
+        out_path = os.path.dirname(myargs[0][0])
         out_file = f'labels_mapped.nii.gz'
         out_file = os.path.join(out_path, out_file)
-
-    maxval = determine_maxval(myargs['inf_json'], myargs['sup_json'])
-    outdtype = np.uint16 if maxval > 255 else np.uint8
 
     save_nifti(
         array=mapped,
         affine=affine,
         out_path=out_file,
         header=header,
-        dtype=outdtype,
+        dtype=np.uint8,
         overwrite=True # maybe be user controlled?
     )
 
@@ -135,16 +94,12 @@ def main():
 def parse_args():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('-niftis', required=True, nargs='+', type=str,
-                        help='Nifti files to be mapped.')
-    parser.add_argument('-jsons', required=True, nargs='+', type=str,
-                        help='Json files to do the mapping. Nº niftis and nº jsons HAS to be the same')
+    parser.add_argument('folder', type=str)
     parser.add_argument('-skip', required=False, default=None, nargs='+', type=int,
                         help='add after this argument the integers to skip. E.g.: 1 2 3 4')
-    parser.add_argument('-out_file', required=False, default=None, type=str,
+    parser.add_argument('-o', '--out_file', type=str,
                         help='Output file path.')
-    args, unrecognized_args = parser.parse_known_args()
-
+    args = parser.parse_args()
     return args
 
 if __name__ == "__main__":

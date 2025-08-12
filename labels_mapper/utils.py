@@ -1,7 +1,8 @@
 import json, os
-from typing import Union, Dict, Tuple, Iterable, List
+from typing import Union, Dict, Tuple
 import numpy as np
 import nibabel as nib
+import warnings
 
 
 def load_nifti(path: str) -> Tuple[np.ndarray, ...]:
@@ -12,6 +13,7 @@ def load_nifti(path: str) -> Tuple[np.ndarray, ...]:
     array = np.asanyarray(nifti.dataobj)
 
     return array, nifti.affine, nifti.header
+
 
 def save_nifti(array: np.ndarray,
                affine: np.ndarray,
@@ -25,6 +27,7 @@ def save_nifti(array: np.ndarray,
     if dtype is not None:
         outnii.set_data_dtype(dtype)
     nib.save(outnii, out_path)
+
 
 def parse_json_mappings(file: str, return_patient: bool = False) -> \
     Union[Dict[str, int], Tuple[Dict[str, int], str]]:
@@ -58,32 +61,38 @@ def determine_maxval(*dicts_with_labels: Dict[str, int] | None) -> int | None:
 
     return maxval
 
-def subfiles(folder: str, join: bool = True,
-             prefix: str = None, suffix: str = None,
-             sort: bool = True, exclude: Union[str, Iterable] = None) -> List[str]:
 
-    if join:
-        l = os.path.join
-    else:
-        l = lambda x, y: y
+_ACCEPTED_VALUES = {1, 2, 3} | set(range(11, 49))
 
-    if exclude:
-        # since os.listdir only returns basename, in order to be able to compare
-        # strings consistently we have to convert all exclude args to basename
-        if isinstance(exclude, str):
-            exclude = [os.path.basename(exclude)]
-        elif isinstance(exclude, Iterable):
-            exclude = [os.path.basename(e) for e in exclude]
-        else:
-            raise TypeError(f'Invalid exlude type. Got {type(exclude)}, expected either str or Iterable')
+def sanity_check_json(json_mapping: dict[str, int]) -> None:
+    """
+    Checks:
+    * values follow ISO 3950
+    * unique dict values
+    """
+    vals = json_mapping.values()
+    if any(v not in _ACCEPTED_VALUES for v in vals):
+        msg = (
+            'Unexpected value in the provided json:\n' +
+            [v for v in vals if v not in _ACCEPTED_VALUES].__str__()
+        )
+        raise ValueError(msg)
 
-    res = [l(folder, i) for i in os.listdir(folder) if os.path.isfile(os.path.join(folder, i))
-           and (prefix is None or i.startswith(prefix))
-           and (suffix is None or i.endswith(suffix))
-           and (exclude is None or not any([ex in i for ex in exclude]))]
-    if sort:
-        res.sort()
-    return res
+    if len(set(vals)) != len(vals):
+        msg = (
+            'Found non-unique values in the provided json! It\'s up to you if this is a problem. The values are:\n'
+        )
+        repeated_vals = set(i for i in vals if sum(j == i for j in vals) > 1)
+        warnings.warn(msg + list(repeated_vals).__str__())
+
+    keys = json_mapping.keys()
+    if len(set(keys)) != len(keys):
+        msg = (
+            'Found non-unique keys in the provided json! It\'s up to you if this is a problem. The keys are:\n'
+        )
+        repeated_keys = set(i for i in keys if sum(j == i for j in keys) > 1)
+        warnings.warn(msg + list(repeated_keys).__str__())
+
 
 if __name__ == "__main__":
 
