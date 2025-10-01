@@ -25,46 +25,38 @@ def change_label(seg: np.ndarray,
 
     return out
 
-def sum_inf_nd_sup(infnd: np.ndarray,
-                   supnd: np.ndarray,
-                   affine: np.ndarray,
-                   patient: str = None) -> np.ndarray:
+def sum_inf_nd_sup(infnd: np.ndarray, supnd: np.ndarray) -> np.ndarray:
     """
     Adds up both labels, from inf and sup mouth.
     """
     overlap = np.logical_and(infnd, supnd)
     if overlap.any():
-        debugging_path = os.path.abspath(os.getcwd() + '/overlap_for_debugging.nii.gz')
-        save_nifti(
-            overlap,
-            affine=affine,
-            out_path=debugging_path,
-            overwrite=True,
-            dtype=np.uint8
-        )
-        raise RuntimeError(f'Found overlap when processing patient {patient if patient else 'UNKNOWN'}, '
-                           f'saved overlap array at {debugging_path} for debugging purposes.')
+        print('*' * 20)
+        print('Found overlap between inferior and superior segmentations. Gonna empty '
+              'the superior area to make space for the inferior (inferior has preference).')
+        print('*' * 20)
+        supnd[overlap] = 0
 
     return infnd + supnd
 
-def process_subject(*tuples: tuple[str, str],
+def process_subject(*files: tuple[str, str],
                     skip: Optional[Iterable[int]]) -> np.ndarray:
     """
-    :param tuples: should be a tuple where the first item is a nifti, the second one a json
+    :param files: each should be a tuple where the first item is a nifti, the second one a json
     """
-    (seg_file, json_file), *tuples = tuples
+    (seg_file, json_file), *files = files
 
     seg, affine, header = load_nifti(seg_file)
 
-    mapping = parse_json_mappings(json_file) 
+    mapping = parse_json_mappings(json_file)
     ret = change_label(seg, mapping, skip)
-    
-    for seg_file, json_file in tuples:
+
+    for seg_file, json_file in files:
         seg, _affine, _ = load_nifti(seg_file)
         mapping = parse_json_mappings(json_file)
         assert np.allclose(affine, _affine)
         mapped_seg = change_label(seg, mapping, skip)
-        ret += mapped_seg
+        ret = sum_inf_nd_sup(mapped_seg, ret)
 
     return ret, affine, header
 
