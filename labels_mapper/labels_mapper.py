@@ -1,6 +1,6 @@
 import os
-import re
-from typing import Iterable, Dict, Union, Set, Optional
+import warnings
+from typing import Iterable, Dict, Optional
 import numpy as np
 from labels_mapper.utils import *
 from .folder_stuff import get_args
@@ -54,7 +54,13 @@ def process_subject(*files: tuple[str, str],
     for seg_file, json_file in files:
         seg, _affine, _ = load_nifti(seg_file)
         mapping = parse_json_mappings(json_file)
-        assert np.allclose(affine, _affine)
+        if not np.allclose(affine, _affine):
+            msg = (
+                'Mismatch between the affines (headers) between the input segmentations given. '
+                'Please proceed with caution. The observed orientations are: "%s" and "%s".' % \
+                (nib.aff2axcodes(affine).__str__(), nib.aff2axcodes(_affine).__str__())
+            )
+            warnings.warn(msg)
         mapped_seg = change_label(seg, mapping, skip)
         ret = sum_inf_nd_sup(mapped_seg, ret)
 
@@ -86,7 +92,9 @@ def main():
 def parse_args():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('folder', type=str)
+    parser.add_argument('folder', type=str,
+                        help="Input folder where the inf/sup segmentations and json mappings are located. "
+                        "It has to be of the form either \"<subject>\", \"<subject>/labels\" or \"<subject>/labels/<rater>\".")
     parser.add_argument('-skip', required=False, default=None, nargs='+', type=int,
                         help='add after this argument the integers to skip. E.g.: 1 2 3 4')
     parser.add_argument('-o', '--out_file', type=str,
