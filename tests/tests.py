@@ -1,6 +1,6 @@
 import os
-from .folder_stuff import list_join_and_filter, _REGEX_STRICT, get_args
-from .utils import sanity_check_json
+from labels_mapper.folder_stuff import list_join_and_filter, _REGEX_STRICT, get_args
+from labels_mapper.utils import sanity_check_json
 
 TEST_DATA = 'test-data'
 def naive_joiner(folder):
