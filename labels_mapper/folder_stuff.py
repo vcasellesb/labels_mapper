@@ -13,6 +13,11 @@ JSON_REGEX = COMMON_REGEX + r'.*\.json'
 _REGEX = r'(?P<loc>inf|sup).*\.(?P<file>nii|json)'
 _REGEX_STRICT = r'(?P<loc>inf|sup)\.(?P<file>nii|json)'
 
+# Aquest és l'ordre de prioritat dels raters. El primer
+# que trobem es dóna
+_RATERS_ORDER = ('R6', 'R3', 'R2', 'R4', 'R1')
+
+
 def get_regex(nifti: bool, strict: bool) -> re.Pattern:
     regex_string = COMMON_REGEX
     if strict:
@@ -89,6 +94,8 @@ def sort_args(list_of_matches1: list[re.Match], list_of_matches2: list[re.Match]
             (list_of_matches1[i].string, 
              next(i.string for i in list_of_matches2 if i.group('loc') == this_group))
         )
+    # add this line to always get inf tuple first
+    output = sorted(output)
     return output
 
 
@@ -128,7 +135,6 @@ def get_args_dict_from_folder(folder: str) -> list[tuple[str, str]]:
         files = _get_args_dict_from_folder(folder, reg)
     return files
 
-_RATERS_ORDER = ('R6', 'R3', 'R2', 'R4', 'R1')
 def get_rater_folder(folder: str):
     for rater in _RATERS_ORDER:
         this_folder = os.path.join(folder, rater)
@@ -152,9 +158,10 @@ def get_args(folder: str):
             exceptions.append(e)
             continue
         except StopIteration as e:
+            paths_tried = set(str(x) for x in exceptions)
             msg = (
                 'No valid inputs found! Tried the following folders:\n' +
-                ('%s\n' * len(exceptions)) % tuple(str(x) for x in exceptions)
+                ('\n%s' * len(paths_tried)) % tuple(paths_tried)
             )
             raise FileNotFoundError(msg) from e
         return this_try

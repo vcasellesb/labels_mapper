@@ -2,3 +2,4 @@
 testing_area
 __pycache__/
 *.egg-info
+test-data/*/
