@@ -12,7 +12,10 @@ What is meant by a valid folder? Either of the three directory depths from a fol
 
 `subjXXX/labels/R[0-9]`
 
-Where inside `subjXXX/labels/R[0-9]` the nifti (`.nii.gz`) and json files can be found. I.e., let's say you want to process subject `015` segmented by rater `R5`. You could do so using either of the three following commands:
+Where inside `subjXXX/labels/R[0-9]` the nifti (`.nii.gz`) and json files can be found. 
+
+# Example
+Let's say you want to process subject `015` segmented by rater `R5`. You could do so using either of the three following commands:
 ```bash
 python3 015 -o 015/R5_015.nii.gz
 ```
